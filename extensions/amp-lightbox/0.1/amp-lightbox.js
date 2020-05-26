@@ -123,7 +123,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.active_ = false;
 
     /**  @private {?function(this:AmpLightbox, Event)}*/
-    this.boundCloseOnEscape_ = null;
+    this.boundOnKeypressed_ = null;
 
     /** @private {boolean} */
     this.isScrollable_ = false;
@@ -269,12 +269,13 @@ class AmpLightbox extends AMP.BaseElement {
       return;
     }
     this.initialize_();
-    this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEscape_.bind(
+
+    this.boundOnKeypressed_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.onKeypressed_.bind(
       this
     ));
     this.win.document.documentElement.addEventListener(
       'keydown',
-      this.boundCloseOnEscape_
+      this.boundOnKeypressed_
     );
 
     const {promise, resolve} = new Deferred();
@@ -379,6 +380,8 @@ class AmpLightbox extends AMP.BaseElement {
     owners.scheduleResume(this.element, container);
     this.triggerEvent_(LightboxEvents.OPEN, trust);
 
+    this.focusInModal_();
+
     this.getHistory_()
       .push(this.close.bind(this))
       .then((historyId) => {
@@ -432,15 +435,49 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
-   * Handles closing the lightbox when the ESC key is pressed.
+   * Handles actions when keys are pressed.
    * @param {!Event} event
    * @private
    */
-  closeOnEscape_(event) {
+  closeOnKeypress_(event) {
+    console.log('keypress');
+
     if (event.key == Keys.ESCAPE) {
-      event.preventDefault();
-      // Keypress gesture is high trust.
-      this.close(ActionTrust.HIGH);
+      this.closeOnKeypress_(event);
+    } else {
+      this.verifyFocus_();
+    }
+  }
+
+  /**
+   * Handles closing the lightbox because the ESC key is pressed.
+   * @param {!Event} event
+   * @private
+   */
+  closeOnKeypress_(event) {
+    event.preventDefault();
+    // Keypress gesture is high trust.
+    this.close(ActionTrust.HIGH);
+  }
+
+  focusInModal_() {
+    if (!verifyFocus_) {
+      const focusable = document.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      tryFocus(focusable[0]);
+    }
+  }
+
+  /**
+   * Handles if the focus is lost.
+   * @param {!Event} event
+   * @private
+   */
+  verifyFocus_() {
+    if (!hasCurrentFocus_()) {
+      console.log('lost focus');
+      this.closeOnKeypress_(event);
     }
   }
 
@@ -503,9 +540,9 @@ class AmpLightbox extends AMP.BaseElement {
     }
     this.win.document.documentElement.removeEventListener(
       'keydown',
-      this.boundCloseOnEscape_
+      this.boundOnKeypressed_
     );
-    this.boundCloseOnEscape_ = null;
+    this.boundOnKeypressed_ = null;
     Services.ownersForDoc(this.element).schedulePause(
       this.element,
       dev().assertElement(this.container_)
@@ -520,6 +557,17 @@ class AmpLightbox extends AMP.BaseElement {
    */
   isInAd_() {
     return getMode(this.win).runtime == 'inabox' || isInFie(this.element);
+  }
+
+  /**
+   * @return {boolean}
+   * @private
+   */
+  hasCurrentFocus_() {
+    if (element.contains(document.activeElement)) {
+      return true;
+    }
+    return false;
   }
 
   /**
