@@ -193,13 +193,13 @@ class AmpLightbox extends AMP.BaseElement {
     this.element.classList.add('i-amphtml-overlay');
     this.action_ = Services.actionServiceForDoc(this.element);
     this.maybeSetTransparentBody_();
-    this.maybeRenderCloseButtonHeader_();
 
     this.registerDefaultAction(i => this.open_(i.trust, i.caller), 'open');
     this.registerAction('close', i => this.close(i.trust));
     /** If the element is in an email document, allow its `open` and `close` actions. */
     this.action_.addToWhitelist('AMP-LIGHTBOX', ['open', 'close'], ['email']);
 
+    this.maybeRenderCloseButtonHeader_();
     this.closeButton_ = this.getExistingCloseButton_();
     // If we do not have a close button provided by the page author, create one
     // at the start of the lightbox for screen readers.
@@ -293,6 +293,7 @@ class AmpLightbox extends AMP.BaseElement {
     if (this.active_) {
       return;
     }
+
     this.initialize_();
     this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEscape_.bind(
       this
