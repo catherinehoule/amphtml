@@ -127,7 +127,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.active_ = false;
 
     /**  @private {?function(this:AmpLightbox, Event)}*/
-    this.boundCloseOnKeypress_ = null;
+    this.boundCloseOnEscape_ = null;
 
     /**  @private {?function(this:AmpLightbox)}*/
     this.boundFocusIn_ = null;
@@ -150,8 +150,6 @@ class AmpLightbox extends AMP.BaseElement {
     /** @private {?number} */
     this.scrollTimerId_ = null;
 
-    this.timeout = null;
-
     /** @private @const {string} */
     this.animationPreset_ = (
       element.getAttribute('animate-in') || DEFAULT_ANIMATION
@@ -159,6 +157,8 @@ class AmpLightbox extends AMP.BaseElement {
 
     /** @private {?Element} */
     this.closeButtonHeader_ = null;
+
+    /** @private {?Element} */
     this.closeButton_ = null;
 
     const platform = Services.platformFor(this.win);
@@ -193,6 +193,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.element.classList.add('i-amphtml-overlay');
     this.action_ = Services.actionServiceForDoc(this.element);
     this.maybeSetTransparentBody_();
+    this.maybeRenderCloseButtonHeader_();
 
     this.registerDefaultAction(i => this.open_(i.trust, i.caller), 'open');
     this.registerAction('close', i => this.close(i.trust));
@@ -294,12 +295,12 @@ class AmpLightbox extends AMP.BaseElement {
     }
     this.initialize_();
 
-    this.boundCloseOnKeypress_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnKeypress_.bind(
+    this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnKeypress_.bind(
       this
     ));
     this.win.document.documentElement.addEventListener(
       'keydown',
-      this.boundCloseOnKeypress_
+      this.boundCloseOnEscape_
     );
     this.boundFocusIn_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.onFocusIn_.bind(
       this
@@ -382,7 +383,6 @@ class AmpLightbox extends AMP.BaseElement {
     });
 
     this.handleAutofocus_();
-    this.maybeRenderCloseButtonHeader_();
 
     // TODO (jridgewell): expose an API accomodating this per PR #14676
     this.mutateElement(() => {
@@ -578,10 +578,7 @@ class AmpLightbox extends AMP.BaseElement {
     if (this.isScrollable_) {
       setStyle(this.element, 'webkitOverflowScrolling', '');
     }
-    if (this.closeButtonHeader_) {
-      removeElement(this.closeButtonHeader_);
-      this.closeButtonHeader_ = null;
-    }
+
     this.getViewport()
       .leaveLightboxMode(this.element)
       .then(() => this.finalizeClose_(trust));
@@ -625,9 +622,9 @@ class AmpLightbox extends AMP.BaseElement {
     }
     this.win.document.documentElement.removeEventListener(
       'keydown',
-      this.boundCloseOnKeypress_
+      this.boundCloseOnEscape_
     );
-    this.boundCloseOnKeypress_ = null;
+    this.boundCloseOnEscape_ = null;
     Services.ownersForDoc(this.element).schedulePause(
       this.element,
       dev().assertElement(this.container_)
