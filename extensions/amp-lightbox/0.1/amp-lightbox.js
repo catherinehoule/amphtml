@@ -294,8 +294,7 @@ class AmpLightbox extends AMP.BaseElement {
       return;
     }
     this.initialize_();
-
-    this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnKeypress_.bind(
+    this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEscape_.bind(
       this
     ));
     this.win.document.documentElement.addEventListener(
@@ -474,7 +473,7 @@ class AmpLightbox extends AMP.BaseElement {
    * @param {!Event} event
    * @private
    */
-  closeOnKeypress_(event) {
+  closeOnEscape_(event) {
     if (event.key == Keys.ESCAPE) {
       event.preventDefault();
       // Keypress gesture is high trust.
