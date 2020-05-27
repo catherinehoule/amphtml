@@ -32,6 +32,11 @@ import {
   setStyles,
   toggle,
 } from '../../../src/style';
+import {
+  closestAncestorElementBySelector,
+  removeElement,
+  tryFocus,
+} from '../../../src/dom';
 import {createCustomEvent, listenOnce} from '../../../src/event-helper';
 import {debounce} from '../../../src/utils/rate-limit';
 import {dev, devAssert, user} from '../../../src/log';
@@ -39,7 +44,6 @@ import {dict, hasOwn} from '../../../src/utils/object';
 import {getMode} from '../../../src/mode';
 import {htmlFor} from '../../../src/static-template';
 import {isInFie} from '../../../src/iframe-helper';
-import {removeElement, tryFocus} from '../../../src/dom';
 import {toArray} from '../../../src/types';
 
 /** @const {string} */
@@ -123,7 +127,8 @@ class AmpLightbox extends AMP.BaseElement {
     this.active_ = false;
 
     /**  @private {?function(this:AmpLightbox, Event)}*/
-    this.boundOnKeypressed_ = null;
+    this.boundCloseOnKeypress_ = null;
+    this.boundFocusIn_ = null;
 
     /** @private {boolean} */
     this.isScrollable_ = false;
@@ -140,6 +145,8 @@ class AmpLightbox extends AMP.BaseElement {
     /** @private {?number} */
     this.scrollTimerId_ = null;
 
+    this.timeout = null;
+
     /** @private @const {string} */
     this.animationPreset_ = (
       element.getAttribute('animate-in') || DEFAULT_ANIMATION
@@ -147,6 +154,7 @@ class AmpLightbox extends AMP.BaseElement {
 
     /** @private {?Element} */
     this.closeButtonHeader_ = null;
+    this.closeButton_ = null;
 
     const platform = Services.platformFor(this.win);
 
@@ -181,10 +189,21 @@ class AmpLightbox extends AMP.BaseElement {
     this.action_ = Services.actionServiceForDoc(this.element);
     this.maybeSetTransparentBody_();
 
-    this.registerDefaultAction((i) => this.open_(i.trust), 'open');
-    this.registerAction('close', (i) => this.close(i.trust));
+    this.registerDefaultAction(i => this.open_(i.trust), 'open');
+    this.registerAction('close', i => this.close(i.trust));
     /** If the element is in an email document, allow its `open` and `close` actions. */
     this.action_.addToWhitelist('AMP-LIGHTBOX', ['open', 'close'], ['email']);
+
+    this.closeButton_ = this.getExistingCloseButton_();
+    // If we do not have a close button provided by the page author, create one
+    // at the start of the sidebar for screen readers.
+    if (!this.closeButton_) {
+      this.closeButton_ = this.createScreenReaderCloseButton();
+      this.element.insertBefore(this.closeButton_, this.element.firstChild);
+    }
+    // always create a close button at the end of the sidebar for screen
+    // readers.
+    this.element.appendChild(this.createScreenReaderCloseButton());
   }
 
   /**
@@ -193,7 +212,7 @@ class AmpLightbox extends AMP.BaseElement {
    */
   takeOwnershipOfDescendants_() {
     devAssert(this.isScrollable_);
-    this.getComponentDescendants_().forEach((child) => {
+    this.getComponentDescendants_().forEach(child => {
       Services.ownersForDoc(this.element).setOwner(child, this.element);
     });
   }
@@ -228,7 +247,7 @@ class AmpLightbox extends AMP.BaseElement {
     }
     element.appendChild(this.container_);
 
-    children.forEach((child) => {
+    children.forEach(child => {
       this.container_.appendChild(child);
     });
 
@@ -270,12 +289,19 @@ class AmpLightbox extends AMP.BaseElement {
     }
     this.initialize_();
 
-    this.boundOnKeypressed_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.onKeypressed_.bind(
+    this.boundCloseOnKeypress_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnKeypress_.bind(
       this
     ));
     this.win.document.documentElement.addEventListener(
       'keydown',
-      this.boundOnKeypressed_
+      this.boundCloseOnKeypress_
+    );
+    this.boundFocusIn_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.onFocusIn_.bind(
+      this
+    ));
+    this.win.document.documentElement.addEventListener(
+      'focusin',
+      this.boundFocusIn_
     );
 
     const {promise, resolve} = new Deferred();
@@ -326,7 +352,7 @@ class AmpLightbox extends AMP.BaseElement {
     const props = Object.keys(openStyle);
 
     const transition = props
-      .map((p) => `${p} ${durationSeconds}s ease-in`)
+      .map(p => `${p} ${durationSeconds}s ease-in`)
       .join(',');
 
     this.eventCounter_++;
@@ -384,7 +410,7 @@ class AmpLightbox extends AMP.BaseElement {
 
     this.getHistory_()
       .push(this.close.bind(this))
-      .then((historyId) => {
+      .then(historyId => {
         this.historyId_ = historyId;
       });
 
@@ -435,37 +461,15 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
-   * Handles actions when keys are pressed.
-   * @param {!Event} event
-   * @private
-   */
-  closeOnKeypress_(event) {
-    console.log('keypress');
-
-    if (event.key == Keys.ESCAPE) {
-      this.closeOnKeypress_(event);
-    } else {
-      this.verifyFocus_();
-    }
-  }
-
-  /**
    * Handles closing the lightbox because the ESC key is pressed.
    * @param {!Event} event
    * @private
    */
   closeOnKeypress_(event) {
-    event.preventDefault();
-    // Keypress gesture is high trust.
-    this.close(ActionTrust.HIGH);
-  }
-
-  focusInModal_() {
-    if (!verifyFocus_) {
-      const focusable = document.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      tryFocus(focusable[0]);
+    if (event.key == Keys.ESCAPE) {
+      event.preventDefault();
+      // Keypress gesture is high trust.
+      this.close(ActionTrust.HIGH);
     }
   }
 
@@ -474,11 +478,81 @@ class AmpLightbox extends AMP.BaseElement {
    * @param {!Event} event
    * @private
    */
-  verifyFocus_() {
-    if (!hasCurrentFocus_()) {
-      console.log('lost focus');
-      this.closeOnKeypress_(event);
+  onFocusIn_(event) {
+    if (!this.hasCurrentFocus_()) {
+      this.close(ActionTrust.HIGH);
     }
+  }
+
+  /**
+   * Focus in the lightbox if it's not yet.
+   * @private
+   */
+  focusInModal_() {
+    if (!this.hasCurrentFocus_()) {
+      tryFocus(this.closeButton_);
+    }
+  }
+
+  /**
+   * Gets a close button, provided by the page author, if one exists.
+   * @return {?Element} The close button.
+   */
+  getExistingCloseButton_() {
+    const {element} = this;
+    const candidates = element.querySelectorAll('[on]');
+
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
+      const hasAction = this.action_.hasResolvableActionForTarget(
+        candidate,
+        'tap',
+        element,
+        devAssert(candidate.parentElement)
+      );
+      const inToolbar = closestAncestorElementBySelector(
+        candidate,
+        '[toolbar]'
+      );
+
+      if (hasAction && !inToolbar) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Creates an "invisible" close button for screen readers to close the
+   * sidebar.
+   * @return {!Element}
+   */
+  createScreenReaderCloseButton() {
+    const {element} = this;
+
+    // Replacement label for invisible close button set value in amp sidebar
+    const ariaLabel =
+      element.getAttribute('data-close-button-aria-label') || 'Close the modal';
+
+    // Invisible close button at the end of sidebar for screen-readers.
+    const screenReaderCloseButton = this.win.document.createElement('button');
+
+    screenReaderCloseButton.textContent = ariaLabel;
+    screenReaderCloseButton.classList.add('i-amphtml-screen-reader');
+    // This is for screen-readers only, should not get a tab stop. Note that
+    // screen readers can still swipe / navigate to this element, it just will
+    // not be reachable via the tab button. Note that for desktop, hitting esc
+    // to close is also an option.
+    // We do not want this in the tab order since it is not really "visible"
+    // and would be confusing to tab to if not using a screen reader.
+    //screenReaderCloseButton.tabIndex = -1;
+    screenReaderCloseButton.addEventListener('click', () => {
+      // Click gesture is high trust.
+      this.close(ActionTrust.HIGH);
+    });
+
+    return screenReaderCloseButton;
   }
 
   /**
@@ -540,9 +614,9 @@ class AmpLightbox extends AMP.BaseElement {
     }
     this.win.document.documentElement.removeEventListener(
       'keydown',
-      this.boundOnKeypressed_
+      this.boundCloseOnKeypress_
     );
-    this.boundOnKeypressed_ = null;
+    this.boundCloseOnKeypress_ = null;
     Services.ownersForDoc(this.element).schedulePause(
       this.element,
       dev().assertElement(this.container_)
@@ -564,6 +638,8 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   hasCurrentFocus_() {
+    const {element} = this;
+
     if (element.contains(document.activeElement)) {
       return true;
     }
@@ -649,14 +725,14 @@ class AmpLightbox extends AMP.BaseElement {
    */
   updateChildrenInViewport_(newPos, oldPos) {
     const seen = [];
-    this.forEachVisibleChild_(newPos, (cell) => {
+    this.forEachVisibleChild_(newPos, cell => {
       seen.push(cell);
       const owners = Services.ownersForDoc(this.element);
       owners.updateInViewport(this.element, cell, true);
       owners.scheduleLayout(this.element, cell);
     });
     if (oldPos != newPos) {
-      this.forEachVisibleChild_(oldPos, (cell) => {
+      this.forEachVisibleChild_(oldPos, cell => {
         if (!seen.includes(cell)) {
           Services.ownersForDoc(this.element).updateInViewport(
             this.element,
@@ -787,7 +863,7 @@ function setTransparentBody(win, body) {
   );
 }
 
-AMP.extension(TAG, '0.1', (AMP) => {
+AMP.extension(TAG, '0.1', AMP => {
   // TODO(alanorozco): refactor this somehow so we don't need to do a direct
   // getMode check
   if (getMode().runtime == 'inabox') {
