@@ -92,18 +92,11 @@ const DEFAULT_ANIMATION = 'fade-in';
  */
 function renderCloseButtonHeader(ctx) {
   return htmlFor(ctx)`
-    <i-amphtml-ad-close-header role=button tabindex=0 aria-label="Close Ad">
+    <i-amphtml-ad-close-header role="button" tabindex=0 aria-label="Close Ad">
       <div>Ad</div>
       <i-amphtml-ad-close-button class="amp-ad-close-button">
       </i-amphtml-ad-close-button>
     </i-amphtml-ad-close-header>`;
-}
-
-/**
- * @param {!Element} header
- */
-function showCloseButtonHeader(header) {
-  header.classList.add('amp-ad-close-header');
 }
 
 class AmpLightbox extends AMP.BaseElement {
@@ -391,6 +384,7 @@ class AmpLightbox extends AMP.BaseElement {
     });
 
     this.handleAutofocus_();
+    this.maybeFitCloseButtonHeader_();
 
     // TODO (jridgewell): expose an API accomodating this per PR #14676
     this.mutateElement(() => {
@@ -445,24 +439,45 @@ class AmpLightbox extends AMP.BaseElement {
       return;
     }
 
-    const header = renderCloseButtonHeader(element);
+    this.closeButtonHeader_ = renderCloseButtonHeader(element);
+    element.insertBefore(this.closeButtonHeader_, this.container_);
 
-    this.closeButtonHeader_ = header;
+    this.closeButtonHeader_.addEventListener('click', () => {
+      // Click gesture is high trust.
+      this.close(ActionTrust.HIGH);
+    });
 
-    // Click gesture is high trust.
-    listenOnce(header, 'click', () => this.close(ActionTrust.HIGH));
+    // click event doesn't close on enter with i-amphtml-ad-close-header
+    this.closeButtonHeader_.addEventListener(
+      'keypress',
+      function(e) {
+        if (e.key === 'Enter') {
+          // Click gesture is high trust.
+          this.close(ActionTrust.HIGH);
+        }
+      }.bind(this)
+    );
+  }
 
-    element.insertBefore(header, this.container_);
-
+  /**
+   * Activate and add basic style to the ad close header
+   * @private
+   */
+  maybeFitCloseButtonHeader_() {
+    console.log('maybefit');
+    if (!this.closeButtonHeader_) {
+      return;
+    }
     let headerHeight;
 
     this.measureMutateElement(
       () => {
-        headerHeight = header./*OK*/ getBoundingClientRect().height;
+        headerHeight = this.closeButtonHeader_./*OK*/ getBoundingClientRect()
+          .height;
       },
       () => {
         // Done in vsync in order to apply transition.
-        showCloseButtonHeader(header);
+        this.closeButtonHeader_.classList.add('amp-ad-close-header');
 
         setImportantStyles(dev().assertElement(this.container_), {
           'margin-top': px(headerHeight),
@@ -499,6 +514,7 @@ class AmpLightbox extends AMP.BaseElement {
    * @param {!ActionTrust} trust
    */
   close(trust) {
+    console.log('close');
     if (!this.active_) {
       return;
     }
@@ -618,12 +634,11 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   getExistingCloseButton_() {
-    const {element} = this;
-    const candidates = element.querySelectorAll('[on]');
-
     if (this.closeButtonHeader_) {
       return this.closeButtonHeader_;
     }
+    const {element} = this;
+    const candidates = element.querySelectorAll('[on]');
 
     for (let i = 0; i < candidates.length; i++) {
       const candidate = candidates[i];

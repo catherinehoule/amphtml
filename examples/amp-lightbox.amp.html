@@ -82,23 +82,7 @@
     Open Scrollable Lightbox
   </button>
 
-  <div id="lipsum">
-      <p>
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam porta sodales lectus, a gravida lacus auctor et. Nullam id urna ut neque euismod vehicula. Mauris scelerisque ullamcorper neque in malesuada. In lobortis placerat leo, eu posuere lectus semper in. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Pellentesque sed condimentum augue, sit amet porta justo. Integer nec lorem nisi. Phasellus ultrices libero tristique, aliquam neque eleifend, faucibus velit. Morbi vitae pretium augue.
-      </p>
-      <p>
-      Vivamus vel risus vulputate diam malesuada ornare. Nam a urna orci. Vivamus risus tellus, interdum eu turpis ac, tempus viverra sem. In sed leo scelerisque, blandit nibh a, lacinia diam. Maecenas metus arcu, accumsan porta elementum ac, euismod eu leo. Donec ornare risus dui, ut dictum libero imperdiet vitae. Nunc tincidunt velit eu ex dictum posuere. Aliquam interdum orci lectus, et finibus ex bibendum tempor. Phasellus dignissim nibh et maximus ornare. Aliquam ligula lorem, varius non enim ut, imperdiet bibendum magna. Nulla facilisi. Proin pellentesque tristique tellus in egestas. Curabitur laoreet viverra ligula, sit amet finibus arcu. Morbi sed neque sit amet arcu tempus molestie. Mauris aliquam eget nunc eget venenatis. Ut vel mi nec mi mattis ullamcorper vel a enim.
-      </p>
-      <p>
-      Donec ultrices eleifend tristique. Etiam convallis quam lectus, eget tristique elit blandit a. Mauris non tortor et lorem tristique euismod. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse sit amet dui sed ipsum lobortis porttitor interdum nec magna. In et ornare urna, mattis sagittis ipsum. Proin vel felis at urna finibus malesuada eu sit amet mi. Quisque ultrices fringilla est vitae scelerisque. Ut condimentum dui ultrices, venenatis neque at, maximus metus.
-      </p>
-      <p>
-      Praesent elementum sollicitudin risus cursus viverra. In eget scelerisque arcu, tincidunt cursus magna. Cras turpis libero, facilisis sed turpis sed, hendrerit cursus libero. Donec ut sapien ut sem sollicitudin mattis ut ut dui. Phasellus sollicitudin eros vitae venenatis fringilla. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut molestie nibh semper turpis tempor finibus. Mauris eget sagittis tortor. Fusce interdum enim vitae urna iaculis auctor. Ut volutpat volutpat dignissim. Sed in felis ut nibh faucibus laoreet. Etiam a leo accumsan, efficitur erat non, luctus dui. Vivamus a semper enim, eget luctus dolor. Vestibulum aliquam ullamcorper neque quis bibendum.
-      </p>
-      <p>
-      Proin sit amet lacus nec mi eleifend feugiat tristique ac leo. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Fusce id luctus nisi. Vestibulum viverra auctor nisl, a placerat leo interdum ac. Nullam porttitor auctor ultrices. Etiam tempus lectus urna, sit amet accumsan ante pellentesque eget. Fusce hendrerit scelerisque massa ut venenatis. Vivamus in diam maximus mi ultrices aliquet. Donec lacinia porttitor augue, nec blandit mauris eleifend at. Mauris ante ligula, tincidunt id risus sit amet, laoreet pharetra orci. Aenean id dolor condimentum, mattis libero et, posuere erat. Pellentesque quis magna eu odio pellentesque congue. Sed fringilla massa ut laoreet suscipit.
-      </p>
-  </div>
+  <h2> Other types of close buttons / focus lightbox</h2>
 
   <amp-lightbox id="lightbox-without-close" layout="nodisplay" animate-in="fly-in-top">
     <p class="lightbox-text">
@@ -151,25 +135,12 @@
   </button>
 
 
-  <h2> Ads</h2>
-  <!-- Ad -->
-  <amp-ad-banner class="root-container" layout="container">
-    <button on="tap:lightbox-ad.activate">open ad with close button</button>
-  </amp-ad-banner>
-  <amp-lightbox id="lightbox-ad" layout="nodisplay">
-    <amp-img src="https://lh3.googleusercontent.com/pSECrJ82R7-AqeBCOEPGPM9iG9OEIQ_QXcbubWIOdkY=w300-h200-no"
-    width="300"
-    height="200"></amp-img>
-    <h3 class="lightbox-text">Ergonomic Leather Seats</h3>
-    <p class="lightbox-text">Available in Comfort Suede and leather. High-contrast stitching colors available.</p>
-    <p><a href="https://amp.dev/documentation/examples/" target="_blank">Learn more</a></p>
-    <button class="lightbox-close-button" on="tap:lightbox-ad.close">Close</button>
-  </amp-lightbox>
+  <h2>Ad</h2>
 
   <amp-ad-banner class="root-container" layout="container">
-    <button on="tap:lightbox-ad-no-close.activate">open ad with close attribute</button>
+    <button on="tap:lightbox-ad-close-attr.activate">open ad with close attribute</button>
   </amp-ad-banner>
-  <amp-lightbox id="lightbox-ad-no-close" layout="nodisplay" close-button>
+  <amp-lightbox id="lightbox-ad-close-attr" layout="nodisplay" close-button>
     <amp-img src="https://lh3.googleusercontent.com/pSECrJ82R7-AqeBCOEPGPM9iG9OEIQ_QXcbubWIOdkY=w300-h200-no"
     width="300"
     height="200"></amp-img>
@@ -177,6 +148,28 @@
     <p class="lightbox-text">Available in Comfort Suede and leather. High-contrast stitching colors available.</p>
     <p><a href="https://amp.dev/documentation/examples/" target="_blank">Learn more</a></p>
   </amp-lightbox>
+
+  <!-- Need last item to test focus going back to page-->
+  <p><a href="https://amp.dev/documentation/examples/components/amp-lightbox/?format=ads">Lightbox ad</a></p>
+
+  <div id="lipsum">
+    <p>
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam porta sodales lectus, a gravida lacus auctor et. Nullam id urna ut neque euismod vehicula. Mauris scelerisque ullamcorper neque in malesuada. In lobortis placerat leo, eu posuere lectus semper in. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Pellentesque sed condimentum augue, sit amet porta justo. Integer nec lorem nisi. Phasellus ultrices libero tristique, aliquam neque eleifend, faucibus velit. Morbi vitae pretium augue.
+    </p>
+    <p>
+    Vivamus vel risus vulputate diam malesuada ornare. Nam a urna orci. Vivamus risus tellus, interdum eu turpis ac, tempus viverra sem. In sed leo scelerisque, blandit nibh a, lacinia diam. Maecenas metus arcu, accumsan porta elementum ac, euismod eu leo. Donec ornare risus dui, ut dictum libero imperdiet vitae. Nunc tincidunt velit eu ex dictum posuere. Aliquam interdum orci lectus, et finibus ex bibendum tempor. Phasellus dignissim nibh et maximus ornare. Aliquam ligula lorem, varius non enim ut, imperdiet bibendum magna. Nulla facilisi. Proin pellentesque tristique tellus in egestas. Curabitur laoreet viverra ligula, sit amet finibus arcu. Morbi sed neque sit amet arcu tempus molestie. Mauris aliquam eget nunc eget venenatis. Ut vel mi nec mi mattis ullamcorper vel a enim.
+    </p>
+    <p>
+    Donec ultrices eleifend tristique. Etiam convallis quam lectus, eget tristique elit blandit a. Mauris non tortor et lorem tristique euismod. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse sit amet dui sed ipsum lobortis porttitor interdum nec magna. In et ornare urna, mattis sagittis ipsum. Proin vel felis at urna finibus malesuada eu sit amet mi. Quisque ultrices fringilla est vitae scelerisque. Ut condimentum dui ultrices, venenatis neque at, maximus metus.
+    </p>
+    <p>
+    Praesent elementum sollicitudin risus cursus viverra. In eget scelerisque arcu, tincidunt cursus magna. Cras turpis libero, facilisis sed turpis sed, hendrerit cursus libero. Donec ut sapien ut sem sollicitudin mattis ut ut dui. Phasellus sollicitudin eros vitae venenatis fringilla. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut molestie nibh semper turpis tempor finibus. Mauris eget sagittis tortor. Fusce interdum enim vitae urna iaculis auctor. Ut volutpat volutpat dignissim. Sed in felis ut nibh faucibus laoreet. Etiam a leo accumsan, efficitur erat non, luctus dui. Vivamus a semper enim, eget luctus dolor. Vestibulum aliquam ullamcorper neque quis bibendum.
+    </p>
+    <p>
+    Proin sit amet lacus nec mi eleifend feugiat tristique ac leo. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Fusce id luctus nisi. Vestibulum viverra auctor nisl, a placerat leo interdum ac. Nullam porttitor auctor ultrices. Etiam tempus lectus urna, sit amet accumsan ante pellentesque eget. Fusce hendrerit scelerisque massa ut venenatis. Vivamus in diam maximus mi ultrices aliquet. Donec lacinia porttitor augue, nec blandit mauris eleifend at. Mauris ante ligula, tincidunt id risus sit amet, laoreet pharetra orci. Aenean id dolor condimentum, mattis libero et, posuere erat. Pellentesque quis magna eu odio pellentesque congue. Sed fringilla massa ut laoreet suscipit.
+    </p>
+</div>
+
 </article>
 </body>
 </html>
