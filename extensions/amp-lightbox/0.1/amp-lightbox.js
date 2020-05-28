@@ -125,6 +125,9 @@ class AmpLightbox extends AMP.BaseElement {
     /**  @private {?function(this:AmpLightbox, Event)}*/
     this.boundCloseOnEscape_ = null;
 
+    /**  @private {?function(this:AmpLightbox, Event)}*/
+    this.boundCloseOnEnter_ = null;
+
     /**  @private {?function(this:AmpLightbox)}*/
     this.boundFocusin_ = null;
 
@@ -289,6 +292,8 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   open_(trust, openerElement) {
+    console.log('open');
+    console.log(this.active_);
     if (this.active_) {
       return;
     }
@@ -352,6 +357,7 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   finalizeOpen_(callback, trust) {
+    console.log('finalizeopen');
     const {element} = this;
 
     const {
@@ -447,15 +453,12 @@ class AmpLightbox extends AMP.BaseElement {
       this.close(ActionTrust.HIGH);
     });
 
-    // click event doesn't close on enter with i-amphtml-ad-close-header
+    this.boundCloseOnEnter_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEnter_.bind(
+      this
+    ));
     this.closeButtonHeader_.addEventListener(
-      'keypress',
-      function(e) {
-        if (e.key === 'Enter') {
-          // Click gesture is high trust.
-          this.close(ActionTrust.HIGH);
-        }
-      }.bind(this)
+      'keydown',
+      this.boundCloseOnEnter_
     );
   }
 
@@ -502,6 +505,20 @@ class AmpLightbox extends AMP.BaseElement {
    */
   closeOnEscape_(event) {
     if (event.key == Keys.ESCAPE) {
+      event.preventDefault();
+      // Keypress gesture is high trust.
+      this.close(ActionTrust.HIGH);
+    }
+  }
+
+  /**
+   * Handles closing the lightbox when the enter key is pressed.
+   * Need it for i-amphtml-ad-close-header
+   * @param {!Event} event
+   * @private
+   */
+  closeOnEnter_(event) {
+    if (event.key == Keys.ENTER) {
       event.preventDefault();
       // Keypress gesture is high trust.
       this.close(ActionTrust.HIGH);
