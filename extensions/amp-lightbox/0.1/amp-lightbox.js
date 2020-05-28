@@ -130,7 +130,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.boundCloseOnEscape_ = null;
 
     /**  @private {?function(this:AmpLightbox)}*/
-    this.boundFocusIn_ = null;
+    this.boundFocusin_ = null;
 
     /** @private {?Element} */
     this.openerElement_ = null;
@@ -209,6 +209,9 @@ class AmpLightbox extends AMP.BaseElement {
     }
     // always create a close button at the end for screen readers.
     this.element.appendChild(this.createScreenReaderCloseButton());
+
+    this.registerDefaultAction(i => this.open_(i.trust, i.caller), 'open');
+    this.registerAction('close', i => this.close(i.trust));
   }
 
   /**
@@ -302,12 +305,12 @@ class AmpLightbox extends AMP.BaseElement {
       'keydown',
       this.boundCloseOnEscape_
     );
-    this.boundFocusIn_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.onFocusIn_.bind(
+    this.boundFocusin_ = /** @type {?function(this:AmpLightbox)} */ (this.onFocusin_.bind(
       this
     ));
     this.win.document.documentElement.addEventListener(
       'focusin',
-      this.boundFocusIn_
+      this.boundFocusin_
     );
 
     const {promise, resolve} = new Deferred();
@@ -426,10 +429,13 @@ class AmpLightbox extends AMP.BaseElement {
     this.active_ = true;
   }
 
-  /** @private */
+  /**
+   * Renders a top bar with close button if the attribute close-button is set
+   * Used for ad if no close button is set.
+   * @private
+   */
   maybeRenderCloseButtonHeader_() {
     const {element} = this;
-
     if (element.getAttribute('close-button') == null) {
       return;
     }
@@ -470,7 +476,7 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
-   * Handles closing the lightbox because the ESC key is pressed.
+   * Handles closing the lightbox when the ESC key is pressed.
    * @param {!Event} event
    * @private
    */
@@ -486,7 +492,7 @@ class AmpLightbox extends AMP.BaseElement {
    * Handles closing the lightbox if focus is outside.
    * @private
    */
-  onFocusIn_() {
+  onFocusin_() {
     if (!this.hasCurrentFocus_()) {
       this.close(ActionTrust.HIGH);
     }
@@ -625,6 +631,13 @@ class AmpLightbox extends AMP.BaseElement {
       this.boundCloseOnEscape_
     );
     this.boundCloseOnEscape_ = null;
+
+    this.win.document.documentElement.removeEventListener(
+      'focusin',
+      this.boundFocusin_
+    );
+    this.boundFocusin_ = null;
+
     Services.ownersForDoc(this.element).schedulePause(
       this.element,
       dev().assertElement(this.container_)
@@ -651,7 +664,6 @@ class AmpLightbox extends AMP.BaseElement {
    */
   hasCurrentFocus_() {
     const {element} = this;
-
     if (element.contains(document.activeElement)) {
       return true;
     }
