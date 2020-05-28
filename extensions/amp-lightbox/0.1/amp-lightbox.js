@@ -117,6 +117,9 @@ class AmpLightbox extends AMP.BaseElement {
     /** @private {?Element} */
     this.container_ = null;
 
+    /** @private @const {!Document} */
+    this.document_ = this.win.document;
+
     /** @private {?../../../src/service/action-impl.ActionService} */
     this.action_ = null;
 
@@ -204,11 +207,11 @@ class AmpLightbox extends AMP.BaseElement {
     // If we do not have a close button provided by the page author, create one
     // at the start of the lightbox for screen readers.
     if (!this.closeButton_) {
-      this.closeButton_ = this.createScreenReaderCloseButton();
+      this.closeButton_ = this.createScreenReaderCloseButton_();
       this.element.insertBefore(this.closeButton_, this.element.firstChild);
     }
     // always create a close button at the end for screen readers.
-    this.element.appendChild(this.createScreenReaderCloseButton());
+    this.element.appendChild(this.createScreenReaderCloseButton_());
 
     this.registerDefaultAction(i => this.open_(i.trust, i.caller), 'open');
     this.registerAction('close', i => this.close(i.trust));
@@ -301,14 +304,14 @@ class AmpLightbox extends AMP.BaseElement {
     this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEscape_.bind(
       this
     ));
-    this.win.document.documentElement.addEventListener(
+    this.document_.documentElement.addEventListener(
       'keydown',
       this.boundCloseOnEscape_
     );
     this.boundFocusin_ = /** @type {?function(this:AmpLightbox)} */ (this.onFocusin_.bind(
       this
     ));
-    this.win.document.documentElement.addEventListener(
+    this.document_.documentElement.addEventListener(
       'focusin',
       this.boundFocusin_
     );
@@ -324,12 +327,14 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /** @override */
-  mutatedAttributesCallback(mutations) {
+  mutatedAttributesCallback(mutations, i) {
     const open = mutations['open'];
     if (open !== undefined) {
       // Mutations via AMP.setState() require default trust.
       if (open) {
-        this.open_(ActionTrust.DEFAULT);
+        // This suppose that the element that trigered the open is where the focus currently is
+        const openerEl = document.activeElement;
+        this.open_(ActionTrust.DEFAULT, openerEl);
       } else {
         this.close(ActionTrust.DEFAULT);
       }
@@ -489,90 +494,6 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
-   * Handles closing the lightbox if focus is outside.
-   * @private
-   */
-  onFocusin_() {
-    if (!this.hasCurrentFocus_()) {
-      this.close(ActionTrust.HIGH);
-    }
-  }
-
-  /**
-   * Focus in the lightbox if it's not yet.
-   * @private
-   */
-  focusInModal_() {
-    if (!this.hasCurrentFocus_()) {
-      tryFocus(this.closeButton_);
-    }
-  }
-
-  /**
-   * Gets a close button, provided by the page author, if one exists.
-   * @return {?Element} The close button.
-   */
-  getExistingCloseButton_() {
-    const {element} = this;
-    const candidates = element.querySelectorAll('[on]');
-
-    if (this.closeButtonHeader_) {
-      return this.closeButtonHeader_;
-    }
-
-    for (let i = 0; i < candidates.length; i++) {
-      const candidate = candidates[i];
-      const hasAction = this.action_.hasResolvableActionForTarget(
-        candidate,
-        'tap',
-        element,
-        devAssert(candidate.parentElement)
-      );
-      const inToolbar = closestAncestorElementBySelector(
-        candidate,
-        '[toolbar]'
-      );
-
-      if (hasAction && !inToolbar) {
-        return candidate;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Creates an "invisible" close button for screen readers
-   * @return {!Element}
-   */
-  createScreenReaderCloseButton() {
-    const {element} = this;
-
-    // Replacement label for invisible close button set value
-    const ariaLabel =
-      element.getAttribute('data-close-button-aria-label') || 'Close the modal';
-
-    // Invisible close button
-    const screenReaderCloseButton = this.win.document.createElement('button');
-
-    screenReaderCloseButton.textContent = ariaLabel;
-    screenReaderCloseButton.classList.add('i-amphtml-screen-reader');
-    // This is for screen-readers only, should not get a tab stop. Note that
-    // screen readers can still swipe / navigate to this element, it just will
-    // not be reachable via the tab button. Note that for desktop, hitting esc
-    // to close is also an option.
-    // We do not want this in the tab order since it is not really "visible"
-    // and would be confusing to tab to if not using a screen reader.
-    screenReaderCloseButton.tabIndex = -1;
-    screenReaderCloseButton.addEventListener('click', () => {
-      // Click gesture is high trust.
-      this.close(ActionTrust.HIGH);
-    });
-
-    return screenReaderCloseButton;
-  }
-
-  /**
    * Closes the lightbox.
    *
    * @param {!ActionTrust} trust
@@ -626,13 +547,13 @@ class AmpLightbox extends AMP.BaseElement {
     if (this.historyId_ != -1) {
       this.getHistory_().pop(this.historyId_);
     }
-    this.win.document.documentElement.removeEventListener(
+    this.document_.documentElement.removeEventListener(
       'keydown',
       this.boundCloseOnEscape_
     );
     this.boundCloseOnEscape_ = null;
 
-    this.win.document.documentElement.removeEventListener(
+    this.document_.documentElement.removeEventListener(
       'focusin',
       this.boundFocusin_
     );
@@ -659,6 +580,7 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
+   * Verify if focus is still inside the lightbox.
    * @return {boolean}
    * @private
    */
@@ -668,6 +590,88 @@ class AmpLightbox extends AMP.BaseElement {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Handles closing the lightbox if focus is outside.
+   * @private
+   */
+  onFocusin_() {
+    if (!this.hasCurrentFocus_()) {
+      this.close(ActionTrust.HIGH);
+    }
+  }
+
+  /**
+   * Focus in the lightbox if it's not yet.
+   * @private
+   */
+  focusInModal_() {
+    if (!this.hasCurrentFocus_()) {
+      tryFocus(this.closeButton_);
+    }
+  }
+
+  /**
+   * Gets a close button, provided by the page author, if one exists.
+   * @return {?Element} The close button.
+   * @private
+   */
+  getExistingCloseButton_() {
+    const {element} = this;
+    const candidates = element.querySelectorAll('[on]');
+
+    if (this.closeButtonHeader_) {
+      return this.closeButtonHeader_;
+    }
+
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
+      const hasAction = this.action_.hasResolvableActionForTarget(
+        candidate,
+        'tap',
+        element,
+        devAssert(candidate.parentElement)
+      );
+
+      if (hasAction) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Creates an "invisible" close button for screen readers
+   * @return {!Element} The close button.
+   * @private
+   */
+  createScreenReaderCloseButton_() {
+    const {element} = this;
+
+    // Replacement label for invisible close button set value
+    const ariaLabel =
+      element.getAttribute('data-close-button-aria-label') || 'Close the modal';
+
+    // Invisible close button
+    const screenReaderCloseButton = this.document_.createElement('button');
+
+    screenReaderCloseButton.textContent = ariaLabel;
+    screenReaderCloseButton.classList.add('i-amphtml-screen-reader');
+    // This is for screen-readers only, should not get a tab stop. Note that
+    // screen readers can still swipe / navigate to this element, it just will
+    // not be reachable via the tab button. Note that for desktop, hitting esc
+    // to close is also an option.
+    // We do not want this in the tab order since it is not really "visible"
+    // and would be confusing to tab to if not using a screen reader.
+    screenReaderCloseButton.tabIndex = -1;
+    screenReaderCloseButton.addEventListener('click', () => {
+      // Click gesture is high trust.
+      this.close(ActionTrust.HIGH);
+    });
+
+    return screenReaderCloseButton;
   }
 
   /**
