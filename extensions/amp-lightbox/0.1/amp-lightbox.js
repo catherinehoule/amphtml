@@ -32,12 +32,7 @@ import {
   setStyles,
   toggle,
 } from '../../../src/style';
-import {
-  closestAncestorElementBySelector,
-  removeElement,
-  tryFocus,
-} from '../../../src/dom';
-import {createCustomEvent, listenOnce} from '../../../src/event-helper';
+import {createCustomEvent} from '../../../src/event-helper';
 import {debounce} from '../../../src/utils/rate-limit';
 import {dev, devAssert, user} from '../../../src/log';
 import {dict, hasOwn} from '../../../src/utils/object';
@@ -45,6 +40,7 @@ import {getMode} from '../../../src/mode';
 import {htmlFor} from '../../../src/static-template';
 import {isInFie} from '../../../src/iframe-helper';
 import {toArray} from '../../../src/types';
+import {tryFocus} from '../../../src/dom';
 
 /** @const {string} */
 const TAG = 'amp-lightbox';
@@ -292,8 +288,6 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   open_(trust, openerElement) {
-    console.log('open');
-    console.log(this.active_);
     if (this.active_) {
       return;
     }
@@ -325,7 +319,7 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /** @override */
-  mutatedAttributesCallback(mutations, i) {
+  mutatedAttributesCallback(mutations) {
     const open = mutations['open'];
     if (open !== undefined) {
       // Mutations via AMP.setState() require default trust.
@@ -357,7 +351,6 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   finalizeOpen_(callback, trust) {
-    console.log('finalizeopen');
     const {element} = this;
 
     const {
@@ -467,7 +460,6 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   maybeFitCloseButtonHeader_() {
-    console.log('maybefit');
     if (!this.closeButtonHeader_) {
       return;
     }
@@ -531,7 +523,6 @@ class AmpLightbox extends AMP.BaseElement {
    * @param {!ActionTrust} trust
    */
   close(trust) {
-    console.log('close');
     if (!this.active_) {
       return;
     }
