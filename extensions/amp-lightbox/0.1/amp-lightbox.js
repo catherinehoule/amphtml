@@ -88,7 +88,7 @@ const DEFAULT_ANIMATION = 'fade-in';
  */
 function renderCloseButtonHeader(ctx) {
   return htmlFor(ctx)`
-    <i-amphtml-ad-close-header role="button" tabindex=0 aria-label="Close Ad">
+    <i-amphtml-ad-close-header role=button tabindex=0 aria-label="Close Ad">
       <div>Ad</div>
       <i-amphtml-ad-close-button class="amp-ad-close-button">
       </i-amphtml-ad-close-button>
