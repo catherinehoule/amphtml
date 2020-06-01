@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import * as dom from '../../../src/dom';
 import {ActionTrust} from '../../../src/action-constants';
 import {AmpEvents} from '../../../src/amp-events';
 import {CSS} from '../../../build/amp-lightbox-0.1.css';
@@ -40,7 +41,6 @@ import {getMode} from '../../../src/mode';
 import {htmlFor} from '../../../src/static-template';
 import {isInFie} from '../../../src/iframe-helper';
 import {toArray} from '../../../src/types';
-import {tryFocus} from '../../../src/dom';
 
 /** @const {string} */
 const TAG = 'amp-lightbox';
@@ -204,9 +204,6 @@ class AmpLightbox extends AMP.BaseElement {
     }
     // always create a close button at the end for screen readers.
     this.element.appendChild(this.createScreenReaderCloseButton_());
-
-    this.registerDefaultAction(i => this.open_(i.trust, i.caller), 'open');
-    this.registerAction('close', i => this.close(i.trust));
   }
 
   /**
@@ -288,10 +285,10 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   open_(trust, openerElement) {
+    console.log('open11111111');
     if (this.active_) {
       return;
     }
-
     this.initialize_();
     this.boundCloseOnEscape_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEscape_.bind(
       this
@@ -325,8 +322,7 @@ class AmpLightbox extends AMP.BaseElement {
       // Mutations via AMP.setState() require default trust.
       if (open) {
         // This suppose that the element that trigered the open is where the focus currently is
-        const openerEl = document.activeElement;
-        this.open_(ActionTrust.DEFAULT, openerEl);
+        this.open_(ActionTrust.DEFAULT, document.activeElement);
       } else {
         this.close(ActionTrust.DEFAULT);
       }
@@ -341,7 +337,7 @@ class AmpLightbox extends AMP.BaseElement {
   handleAutofocus_() {
     const autofocusElement = this.container_.querySelector('[autofocus]');
     if (autofocusElement) {
-      tryFocus(autofocusElement);
+      dom.tryFocus(autofocusElement);
     }
   }
 
@@ -351,6 +347,8 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   finalizeOpen_(callback, trust) {
+    console.log('finalizeOpen_11111111');
+
     const {element} = this;
 
     const {
@@ -416,13 +414,13 @@ class AmpLightbox extends AMP.BaseElement {
     owners.scheduleResume(this.element, container);
     this.triggerEvent_(LightboxEvents.OPEN, trust);
 
-    this.focusInModal_();
-
     this.getHistory_()
       .push(this.close.bind(this))
       .then(historyId => {
         this.historyId_ = historyId;
       });
+
+    this.focusInModal_();
 
     this.active_ = true;
   }
@@ -591,7 +589,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.triggerEvent_(LightboxEvents.CLOSE, trust);
 
     if (this.openerElement_) {
-      tryFocus(this.openerElement_);
+      dom.tryFocus(this.openerElement_);
     }
   }
 
@@ -611,8 +609,11 @@ class AmpLightbox extends AMP.BaseElement {
   hasCurrentFocus_() {
     const {element} = this;
     if (element.contains(document.activeElement)) {
+      console.log('hasCurrentFocus_YES_11111111');
+
       return true;
     }
+    console.log('hasCurrentFocus_NO_11111111');
     return false;
   }
 
@@ -632,8 +633,11 @@ class AmpLightbox extends AMP.BaseElement {
    */
   focusInModal_() {
     if (!this.hasCurrentFocus_()) {
-      tryFocus(this.closeButton_);
+      console.log('focusInModal_YES_11111111');
+      dom.tryFocus(this.closeButton_);
+      console.log(this.closeButton_);
     }
+    console.log('focusInModal_NO_11111111');
   }
 
   /**
@@ -658,9 +662,12 @@ class AmpLightbox extends AMP.BaseElement {
       );
 
       if (hasAction) {
+        console.log('hasClose_YES_11111111');
+
         return candidate;
       }
     }
+    console.log('hasClose_NO_11111111');
 
     return null;
   }
