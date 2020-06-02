@@ -305,16 +305,16 @@ class AmpLightbox extends AMP.BaseElement {
       this.boundFocusin_
     );
 
+    if (openerElement) {
+      this.openerElement_ = openerElement;
+    }
+
     console.log('before promise 444444');
     const {promise, resolve} = new Deferred();
     this.getViewport()
       .enterLightboxMode(this.element, promise)
       .then(() => this.finalizeOpen_(resolve, trust));
     console.log('after promise 444444');
-
-    if (openerElement) {
-      this.openerElement_ = openerElement;
-    }
   }
 
   /** @override */
@@ -350,6 +350,7 @@ class AmpLightbox extends AMP.BaseElement {
    */
   finalizeOpen_(callback, trust) {
     console.log('finalizeOpen_11111111');
+    console.log(callback);
 
     const {element} = this;
 
@@ -425,6 +426,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.focusInModal_();
 
     this.active_ = true;
+    return Promise.resolved();
   }
 
   /**

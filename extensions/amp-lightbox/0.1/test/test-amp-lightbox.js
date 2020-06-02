@@ -20,6 +20,7 @@ import {ActionService} from '../../../../src/service/action-impl';
 import {ActionTrust} from '../../../../src/action-constants';
 import {Keys} from '../../../../src/utils/key-codes';
 import {Services} from '../../../../src/services';
+import {whenCalled} from '../../../../testing/test-helper.js';
 
 describes.realWin(
   'amp-lightbox component',
@@ -32,7 +33,7 @@ describes.realWin(
   env => {
     let win, doc;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       win = env.win;
       doc = win.document;
     });
@@ -56,10 +57,7 @@ describes.realWin(
       element.appendChild(closeButton);
       doc.body.appendChild(element);
 
-      return element
-        .build()
-        .then(() => element.layoutCallback())
-        .then(() => element);
+      return element;
     }
 
     function createButton() {
@@ -105,29 +103,28 @@ describes.realWin(
     });
 
     it('should close on ESC', () => {
-      return createLightbox().then(lightbox => {
-        const impl = lightbox.implementation_;
-        impl.getHistory_ = () => {
-          return {
-            pop: () => {},
-            push: () => Promise.resolve(11),
-          };
+      const lightbox = createLightbox();
+      const impl = lightbox.implementation_;
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
         };
+      };
 
-        const sourceElement = doc.createElement('button');
-        sourceElement.textContent = 'Open lightbox';
-        doc.body.appendChild(sourceElement);
-        const nextElement = doc.createElement('button');
-        nextElement.textContent = 'Something to focus on';
-        doc.body.appendChild(nextElement);
+      const sourceElement = doc.createElement('button');
+      sourceElement.textContent = 'Open lightbox';
+      doc.body.appendChild(sourceElement);
+      const nextElement = doc.createElement('button');
+      nextElement.textContent = 'Something to focus on';
+      doc.body.appendChild(nextElement);
 
-        const setupCloseSpy = env.sandbox.spy(impl, 'close');
+      const setupCloseSpy = env.sandbox.spy(impl, 'close');
 
-        impl.open_({caller: sourceElement});
-        impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ENTER}));
-        impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ESCAPE}));
-        expect(setupCloseSpy).to.be.calledOnce;
-      });
+      impl.open_({caller: sourceElement});
+      impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ENTER}));
+      impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ESCAPE}));
+      expect(setupCloseSpy).to.be.calledOnce;
     });
 
     // Accessibility
@@ -141,39 +138,32 @@ describes.realWin(
     // 7. Ad: we do not create a button and we focus on the `i-amphtml-ad-close-header`
     //it.only('should not change focus if user has set it already', () => {
     it.only('should focus on close button if no handmade focus but has close button', () => {
-      return createLightbox().then(lightbox => {
-        const impl = lightbox.implementation_;
-        impl.getHistory_ = () => {
-          return {
-            pop: () => {},
-            push: () => Promise.resolve(11),
-          };
+      const lightbox = createLightbox();
+      const impl = lightbox.implementation_;
+      //const closeButton = createButton();
+      //env.sandbox.stub(impl, 'getExistingCloseButton_').returns(closeButton);
+
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
         };
-        //this.getHistory_()
-        //.push(this.close.bind(this))
-        //.then(historyId => {
-        //  this.historyId_ = historyId;
-        //});
+      };
 
-        impl.getViewport = () => {
-          return {
-            enterLightboxMode: () => Promise.resolve(),
-          };
-        };
-        //this.getViewport()
-        //.enterLightboxMode(this.element, promise)
-        //.then(() => this.finalizeOpen_(resolve, trust));
+      const tryFocus = env.sandbox.spy(dom, 'tryFocus');
+      const spy = env.sandbox.spy(impl, 'finalizeOpen_');
 
-        const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
-        impl.open_();
-
-        //const tryIt = env.sandbox.spy(impl, 'focusInModal_');
-        //impl.close();
+      const args = {};
+      const openInvocation = {
+        method: 'open',
+        args,
+        satisfiesTrust: () => true,
+      };
+      impl.executeAction(openInvocation);
+      return whenCalled(spy).then(() => {
         console.log('4444444444 spy');
-        console.log(tryFocusSpy.getCalls());
-        //console.log(tryIt.getCalls());
-        //console.log(env.sandbox.spy.printf('%n / %c fois / %*'));
-        expect(tryFocusSpy).to.be.calledOnce();
+        console.log(tryFocus.getCalls());
+        expect(tryFocus).to.be.calledOnce;
       });
     });
 
