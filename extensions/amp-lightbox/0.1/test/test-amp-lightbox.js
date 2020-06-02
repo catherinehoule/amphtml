@@ -105,21 +105,29 @@ describes.realWin(
     });
 
     it('should close on ESC', () => {
-      const lightbox = createLightbox();
-      const sourceElement = doc.createElement('button');
-      sourceElement.textContent = 'Open lightbox';
-      doc.body.appendChild(sourceElement);
-      const nextElement = doc.createElement('button');
-      nextElement.textContent = 'Something to focus on';
-      doc.body.appendChild(nextElement);
+      return createLightbox().then(lightbox => {
+        const impl = lightbox.implementation_;
+        impl.getHistory_ = () => {
+          return {
+            pop: () => {},
+            push: () => Promise.resolve(11),
+          };
+        };
 
-      const impl = lightbox.implementation_;
-      const setupCloseSpy = env.sandbox.spy(impl, 'close');
+        const sourceElement = doc.createElement('button');
+        sourceElement.textContent = 'Open lightbox';
+        doc.body.appendChild(sourceElement);
+        const nextElement = doc.createElement('button');
+        nextElement.textContent = 'Something to focus on';
+        doc.body.appendChild(nextElement);
 
-      impl.open_({caller: sourceElement});
-      impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ENTER}));
-      impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ESCAPE}));
-      expect(setupCloseSpy).to.be.calledOnce;
+        const setupCloseSpy = env.sandbox.spy(impl, 'close');
+
+        impl.open_({caller: sourceElement});
+        impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ENTER}));
+        impl.closeOnEscape_(new KeyboardEvent('keydown', {key: Keys.ESCAPE}));
+        expect(setupCloseSpy).to.be.calledOnce;
+      });
     });
 
     // Accessibility
@@ -135,29 +143,43 @@ describes.realWin(
     it.only('should focus on close button if no handmade focus but has close button', () => {
       return createLightbox().then(lightbox => {
         const impl = lightbox.implementation_;
-        impl.layoutCallback = () => {};
-
         impl.getHistory_ = () => {
           return {
             pop: () => {},
             push: () => Promise.resolve(11),
           };
         };
-        const sourceElement = createButton();
+        //this.getHistory_()
+        //.push(this.close.bind(this))
+        //.then(historyId => {
+        //  this.historyId_ = historyId;
+        //});
+
+        impl.getViewport = () => {
+          return {
+            enterLightboxMode: () => Promise.resolve(),
+          };
+        };
+        //this.getViewport()
+        //.enterLightboxMode(this.element, promise)
+        //.then(() => this.finalizeOpen_(resolve, trust));
+
         const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
-        const tryIt = env.sandbox.spy(impl, 'focusInModal_');
-        impl.open_({caller: sourceElement});
+        impl.open_();
+
+        //const tryIt = env.sandbox.spy(impl, 'focusInModal_');
+        //impl.close();
         console.log('4444444444 spy');
         console.log(tryFocusSpy.getCalls());
-        console.log(tryIt.getCalls());
+        //console.log(tryIt.getCalls());
         //console.log(env.sandbox.spy.printf('%n / %c fois / %*'));
-        impl.close();
         expect(tryFocusSpy).to.be.calledOnce();
       });
     });
 
     it('should focus on close button if no handmade focus but has close button', () => {
       const lightbox = createLightbox();
+      const sourceElement = createButton();
 
       const tryFocus = env.sandbox.spy(dom, 'tryFocus');
       //const tryOpen = env.sandbox.spy(lightbox, 'open_');

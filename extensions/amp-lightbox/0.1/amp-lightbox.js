@@ -305,10 +305,12 @@ class AmpLightbox extends AMP.BaseElement {
       this.boundFocusin_
     );
 
+    console.log('before promise 444444');
     const {promise, resolve} = new Deferred();
     this.getViewport()
       .enterLightboxMode(this.element, promise)
       .then(() => this.finalizeOpen_(resolve, trust));
+    console.log('after promise 444444');
 
     if (openerElement) {
       this.openerElement_ = openerElement;
