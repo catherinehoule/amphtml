@@ -193,17 +193,6 @@ class AmpLightbox extends AMP.BaseElement {
     this.registerAction('close', i => this.close(i.trust));
     /** If the element is in an email document, allow its `open` and `close` actions. */
     this.action_.addToWhitelist('AMP-LIGHTBOX', ['open', 'close'], ['email']);
-
-    this.maybeRenderCloseButtonHeader_();
-    this.closeButton_ = this.getExistingCloseButton_();
-    // If we do not have a close button provided by the page author, create one
-    // at the start of the lightbox for screen readers.
-    if (!this.closeButton_) {
-      this.closeButton_ = this.createScreenReaderCloseButton_();
-      this.element.insertBefore(this.closeButton_, this.element.firstChild);
-    }
-    // always create a close button at the end for screen readers.
-    this.element.appendChild(this.createScreenReaderCloseButton_());
   }
 
   /**
@@ -285,7 +274,6 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   open_(trust, openerElement) {
-    console.log('open11111111');
     if (this.active_) {
       return;
     }
@@ -309,12 +297,15 @@ class AmpLightbox extends AMP.BaseElement {
       this.openerElement_ = openerElement;
     }
 
-    console.log('before promise 444444');
     const {promise, resolve} = new Deferred();
     this.getViewport()
       .enterLightboxMode(this.element, promise)
       .then(() => this.finalizeOpen_(resolve, trust));
-    console.log('after promise 444444');
+
+    //const promiseVP = new Promise(resolve => {
+    //  this.getViewport().enterLightboxMode(resolve, this.element);
+    //});
+    //promiseVP.then(callback => this.finalizeOpen_(callback, trust));
   }
 
   /** @override */
@@ -349,9 +340,6 @@ class AmpLightbox extends AMP.BaseElement {
    * @private
    */
   finalizeOpen_(callback, trust) {
-    console.log('finalizeOpen_11111111');
-    console.log(callback);
-
     const {element} = this;
 
     const {
@@ -384,7 +372,15 @@ class AmpLightbox extends AMP.BaseElement {
     });
 
     this.handleAutofocus_();
-    this.maybeFitCloseButtonHeader_();
+    this.maybeRenderCloseButtonHeader_();
+    this.closeButton_ = this.getExistingCloseButton_();
+    // If we do not have a close button provided by the page author, create one
+    // at the start of the lightbox for screen readers.
+    if (!this.closeButton_) {
+      this.closeButton_ = this.createScreenReaderCloseButton_();
+      this.element.insertBefore(this.closeButton_, this.element.firstChild);
+      this.tieCloseButton_(this.closeButton_);
+    }
 
     // TODO (jridgewell): expose an API accomodating this per PR #14676
     this.mutateElement(() => {
@@ -426,7 +422,6 @@ class AmpLightbox extends AMP.BaseElement {
     this.focusInModal_();
 
     this.active_ = true;
-    return Promise.resolved();
   }
 
   /**
@@ -439,33 +434,11 @@ class AmpLightbox extends AMP.BaseElement {
     if (element.getAttribute('close-button') == null) {
       return;
     }
+    let headerHeight;
 
     this.closeButtonHeader_ = renderCloseButtonHeader(element);
     element.insertBefore(this.closeButtonHeader_, this.container_);
-
-    this.closeButtonHeader_.addEventListener('click', () => {
-      // Click gesture is high trust.
-      this.close(ActionTrust.HIGH);
-    });
-
-    this.boundCloseOnEnter_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEnter_.bind(
-      this
-    ));
-    this.closeButtonHeader_.addEventListener(
-      'keydown',
-      this.boundCloseOnEnter_
-    );
-  }
-
-  /**
-   * Activate and add basic style to the ad close header
-   * @private
-   */
-  maybeFitCloseButtonHeader_() {
-    if (!this.closeButtonHeader_) {
-      return;
-    }
-    let headerHeight;
+    this.tieCloseButton_(this.closeButtonHeader_);
 
     this.measureMutateElement(
       () => {
@@ -482,6 +455,38 @@ class AmpLightbox extends AMP.BaseElement {
         });
       }
     );
+  }
+
+  /**
+   * --
+   * @private
+   * @param {!Element} button
+   */
+  tieCloseButton_(button) {
+    button.addEventListener('click', () => {
+      // Click gesture is high trust.
+      this.close(ActionTrust.HIGH);
+    });
+
+    this.boundCloseOnEnter_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEnter_.bind(
+      this
+    ));
+    button.addEventListener('keydown', this.boundCloseOnEnter_);
+  }
+
+  /**
+   * --
+   * @private
+   * @param {!Element} button
+   */
+  untieCloseButton_(button) {
+    if (!button) {
+      return;
+    }
+
+    // Make sure all listeners are gone
+    const copyOfButton = button.cloneNode(true);
+    button.parentNode.replaceChild(copyOfButton, button);
   }
 
   /**
@@ -585,6 +590,8 @@ class AmpLightbox extends AMP.BaseElement {
     );
     this.boundFocusin_ = null;
 
+    this.untieCloseButton_(this.closeButton_);
+
     Services.ownersForDoc(this.element).schedulePause(
       this.element,
       dev().assertElement(this.container_)
@@ -613,11 +620,8 @@ class AmpLightbox extends AMP.BaseElement {
   hasCurrentFocus_() {
     const {element} = this;
     if (element.contains(document.activeElement)) {
-      console.log('hasCurrentFocus_YES_11111111');
-
       return true;
     }
-    console.log('hasCurrentFocus_NO_11111111');
     return false;
   }
 
@@ -637,11 +641,8 @@ class AmpLightbox extends AMP.BaseElement {
    */
   focusInModal_() {
     if (!this.hasCurrentFocus_()) {
-      console.log('focusInModal_YES_11111111');
       dom.tryFocus(this.closeButton_);
-      console.log(this.closeButton_);
     }
-    console.log('focusInModal_NO_11111111');
   }
 
   /**
@@ -666,12 +667,9 @@ class AmpLightbox extends AMP.BaseElement {
       );
 
       if (hasAction) {
-        console.log('hasClose_YES_11111111');
-
         return candidate;
       }
     }
-    console.log('hasClose_NO_11111111');
 
     return null;
   }
