@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import * as dom from '../../../src/dom';
 import {ActionTrust} from '../../../src/action-constants';
 import {AmpEvents} from '../../../src/amp-events';
 import {CSS} from '../../../build/amp-lightbox-0.1.css';
@@ -41,6 +40,7 @@ import {getMode} from '../../../src/mode';
 import {htmlFor} from '../../../src/static-template';
 import {isInFie} from '../../../src/iframe-helper';
 import {toArray} from '../../../src/types';
+import {tryFocus} from '../../../src/dom';
 
 /** @const {string} */
 const TAG = 'amp-lightbox';
@@ -301,11 +301,6 @@ class AmpLightbox extends AMP.BaseElement {
     this.getViewport()
       .enterLightboxMode(this.element, promise)
       .then(() => this.finalizeOpen_(resolve, trust));
-
-    //const promiseVP = new Promise(resolve => {
-    //  this.getViewport().enterLightboxMode(resolve, this.element);
-    //});
-    //promiseVP.then(callback => this.finalizeOpen_(callback, trust));
   }
 
   /** @override */
@@ -330,7 +325,7 @@ class AmpLightbox extends AMP.BaseElement {
   handleAutofocus_() {
     const autofocusElement = this.container_.querySelector('[autofocus]');
     if (autofocusElement) {
-      dom.tryFocus(autofocusElement);
+      tryFocus(autofocusElement);
     }
   }
 
@@ -600,7 +595,7 @@ class AmpLightbox extends AMP.BaseElement {
     this.triggerEvent_(LightboxEvents.CLOSE, trust);
 
     if (this.openerElement_) {
-      dom.tryFocus(this.openerElement_);
+      tryFocus(this.openerElement_);
     }
   }
 
@@ -641,7 +636,7 @@ class AmpLightbox extends AMP.BaseElement {
    */
   focusInModal_() {
     if (!this.hasCurrentFocus_()) {
-      dom.tryFocus(this.closeButton_);
+      tryFocus(this.closeButton_);
     }
   }
 
