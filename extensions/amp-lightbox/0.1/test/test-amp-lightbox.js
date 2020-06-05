@@ -30,10 +30,10 @@ describes.realWin(
       runtimeOn: true,
     },
   },
-  env => {
+  (env) => {
     let win, doc;
 
-    beforeEach(async () => {
+    beforeEach(() => {
       win = env.win;
       doc = win.document;
     });
@@ -43,28 +43,28 @@ describes.realWin(
         'id': 'myLightbox',
         'layout': 'nodisplay',
       });
-      const randomButton = dom.createElementWithAttributes(doc, 'button', {
-        'id': 'randomButton',
-      });
-      randomButton.textContent = 'Something to focus on';
-      element.appendChild(randomButton);
-
-      const closeButton = dom.createElementWithAttributes(doc, 'button', {
-        'id': 'closeButton',
-        'on': 'tap:myLightbox.close',
-      });
-      closeButton.textContent = 'X';
-      element.appendChild(closeButton);
       doc.body.appendChild(element);
 
       return element;
     }
 
-    function createButton() {
-      const button = doc.createElement('button');
+    function createOpeningButton(id) {
+      const button = dom.createElementWithAttributes(doc, 'button', {
+        'id': id,
+        'on': 'tap:myLightbox.open',
+      });
       button.textContent = 'Open lightbox';
       doc.body.appendChild(button);
       return button;
+    }
+
+    function createLink(id) {
+      const oneLink = dom.createElementWithAttributes(doc, 'a', {
+        'href': 'https://amp.dev/',
+        'id': id,
+      });
+      oneLink.textContent = 'Something to focus on';
+      return oneLink;
     }
 
     it('should allow default actions in email documents', async () => {
@@ -77,7 +77,7 @@ describes.realWin(
       env.sandbox.stub(element, 'getDefaultActionAlias');
       await dom.whenUpgradedToCustomElement(element);
 
-      ['open', 'close'].forEach(method => {
+      ['open', 'close'].forEach((method) => {
         action.execute(
           element,
           method,
@@ -129,20 +129,20 @@ describes.realWin(
 
     // Accessibility
     // 1. If there is focus in the lightbox, we do not create a top close button or change focus
-    // 2. If there is no focus in the lightbox but has close btn, we focus on it
-    // 3. If there is no focus in the lightbox or close btn, we create a close button and focus on it
-    // 4. If a user "blurs" by focusing on an element that is in the amp-lightbox subtree, it should stay open.
-    // 5a. If a user "blurs" before the amp-lightbox subtree, it should close.
-    // 5b. If a user "blurs" after the amp-lightbox subtree, it should close.
-    // 6. On close, focus should go back to trigger
-    // 7. Ad: we do not create a button and we focus on the `i-amphtml-ad-close-header`
+    // 2. DONE If there is no focus in the lightbox but has close btn, we focus on it
+    // 3. DONE If there is no focus in the lightbox or close btn, we create a close button and focus on it
+    // 4. DONE If a user "blurs" by focusing on an element that is in the amp-lightbox subtree, it should stay open.
+    // 5a. DONE WITH 4 If a user "blurs" before the amp-lightbox subtree, it should close.
+    // 5b. DONE WITH 4 If a user "blurs" after the amp-lightbox subtree, it should close.
+    // 6. DONE On close, focus should go back to trigger
+    // 7. DONE Ad: we do not create a button and we focus on the `i-amphtml-ad-close-header`
     //it.only('should not change focus if user has set it already', () => {
-    it.only('should focus on close button if no handmade focus but has close button', () => {
+    it('should not change focus or create a button if a focus has been made in the modal', () => {
       const lightbox = createLightbox();
+      const myLink = createLink('randomLink');
+      myLink.setAttribute('autofocus', '');
+      lightbox.appendChild(myLink);
       const impl = lightbox.implementation_;
-      //const closeButton = createButton();
-      //env.sandbox.stub(impl, 'getExistingCloseButton_').returns(closeButton);
-
       impl.getHistory_ = () => {
         return {
           pop: () => {},
@@ -150,8 +150,46 @@ describes.realWin(
         };
       };
 
-      const tryFocus = env.sandbox.spy(dom, 'tryFocus');
-      const spy = env.sandbox.spy(impl, 'finalizeOpen_');
+      const openButton = createOpeningButton('openingButton');
+      env.sandbox.stub(impl, 'hasCurrentFocus_').returns(true);
+
+      const focusInModalSpy = env.sandbox.spy(impl, 'focusInModal_');
+      const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
+      const createSRBtnSpy = env.sandbox.spy(
+        impl,
+        'createScreenReaderCloseButton_'
+      );
+
+      openButton.click();
+
+      return whenCalled(focusInModalSpy).then(() => {
+        expect(tryFocusSpy).to.be.calledWith(myLink);
+        expect(createSRBtnSpy).not.to.be.called;
+      });
+    });
+
+    it('should focus on close button if no handmade focus but has close button', () => {
+      const lightbox = createLightbox();
+      const closeButton = dom.createElementWithAttributes(doc, 'button', {
+        'id': 'closeButton',
+        'on': 'tap:myLightbox.close',
+      });
+      closeButton.textContent = 'X';
+      lightbox.appendChild(closeButton);
+
+      const impl = lightbox.implementation_;
+      const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
+      const finalizeSpy = env.sandbox.spy(impl, 'finalizeOpen_');
+      const createCloseButtonSpy = env.sandbox.spy(
+        impl,
+        'createScreenReaderCloseButton_'
+      );
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
+        };
+      };
 
       const args = {};
       const openInvocation = {
@@ -160,45 +198,147 @@ describes.realWin(
         satisfiesTrust: () => true,
       };
       impl.executeAction(openInvocation);
-      return whenCalled(spy).then(() => {
-        console.log('4444444444 spy');
-        console.log(tryFocus.getCalls());
-        expect(tryFocus).to.be.calledOnce;
+
+      return whenCalled(finalizeSpy).then(() => {
+        expect(createCloseButtonSpy).not.to.be.calledWith(closeButton);
+        expect(tryFocusSpy).to.be.calledWith(closeButton);
       });
     });
 
-    it('should focus on close button if no handmade focus but has close button', () => {
+    it('should create close button and focus on it if no handmade focus and no close button', () => {
       const lightbox = createLightbox();
-      const sourceElement = createButton();
 
-      const tryFocus = env.sandbox.spy(dom, 'tryFocus');
-      //const tryOpen = env.sandbox.spy(lightbox, 'open_');
       const impl = lightbox.implementation_;
-      impl.open_();
+      const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
+      const finalizeSpy = env.sandbox.spy(impl, 'finalizeOpen_');
+      const createCloseButtonSpy = env.sandbox.spy(
+        impl,
+        'createScreenReaderCloseButton_'
+      );
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
+        };
+      };
 
-      console.log('33333333 spy');
-      console.log(tryFocus.getCalls());
-      //console.log(tryOpen.getCalls());
-      //console.log(env.sandbox.spy.printf('%n / %c fois / %*'));
-      expect(tryFocus).to.be.calledWith('button');
+      const args = {};
+      const openInvocation = {
+        method: 'open',
+        args,
+        satisfiesTrust: () => true,
+      };
+      impl.executeAction(openInvocation);
+
+      return whenCalled(finalizeSpy).then(() => {
+        expect(createCloseButtonSpy).to.be.calledOnce;
+        expect(tryFocusSpy).to.be.calledOnce;
+      });
+    });
+
+    it('should stay in modal if focus stays in modal and close if outside', () => {
+      const lightbox = createLightbox();
+      const insideLink = createLink('insideLink');
+      lightbox.appendChild(insideLink);
+      const impl = lightbox.implementation_;
+
+      const outsideLink = createLink('outsideLink');
+      doc.body.appendChild(outsideLink);
+
+      const finalizeSpy = env.sandbox.spy(impl, 'finalizeOpen_');
+      const hasFocusStub = env.sandbox.stub(impl, 'hasCurrentFocus_');
+
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
+        };
+      };
+
+      const args = {};
+      const openInvocation = {
+        method: 'open',
+        args,
+        satisfiesTrust: () => true,
+      };
+      impl.executeAction(openInvocation);
+
+      return whenCalled(finalizeSpy).then(() => {
+        const closeSpy = env.sandbox.spy(impl, 'close');
+
+        hasFocusStub.returns(true);
+        dom.tryFocus(insideLink);
+        expect(closeSpy).not.to.be.called;
+
+        hasFocusStub.returns(false);
+        dom.tryFocus(outsideLink);
+        expect(closeSpy).to.be.calledOnce;
+      });
     });
 
     it('should return focus to source element after close', () => {
       const lightbox = createLightbox();
-      const sourceElement = createButton();
-
+      const closeButton = dom.createElementWithAttributes(doc, 'button', {
+        'id': 'closeButton',
+        'on': 'tap:myLightbox.close',
+      });
+      closeButton.textContent = 'X';
+      lightbox.appendChild(closeButton);
       const impl = lightbox.implementation_;
-      tryFocus(sourceElement);
 
-      expect(doc.activeElement).to.equal(sourceElement);
-      impl.open_({caller: sourceElement});
-      expect(doc.activeElement).not.to.equal(sourceElement);
+      const openButton = createOpeningButton('openingButton');
 
-      const tryFocusSpy = env.sandbox.spy(impl, 'tryFocus');
-      impl.close();
+      const openSpy = env.sandbox.spy(impl, 'finalizeOpen_');
+      const closeSpy = env.sandbox.spy(impl, 'finalizeClose_');
+      const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
 
-      expect(tryFocusSpy).to.be.calledWith(sourceElement);
-      expect(doc.activeElement).to.equal(sourceElement);
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
+        };
+      };
+
+      openButton.click();
+      whenCalled(openSpy).then(() => closeButton.click());
+
+      return whenCalled(closeSpy).then(() => {
+        expect(tryFocusSpy).to.be.calledWith(openButton);
+      });
+    });
+
+    it('should create `i-amphtml-ad-close-header` but no close button if param then focus on it', () => {
+      const lightbox = createLightbox();
+      lightbox.setAttribute('close-button', '');
+      const impl = lightbox.implementation_;
+
+      const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
+      const finalizeSpy = env.sandbox.spy(impl, 'finalizeOpen_');
+      const tieSpy = env.sandbox.spy(impl, 'tieCloseButton_');
+      const createCloseButtonSpy = env.sandbox.spy(
+        impl,
+        'createScreenReaderCloseButton_'
+      );
+      impl.getHistory_ = () => {
+        return {
+          pop: () => {},
+          push: () => Promise.resolve(11),
+        };
+      };
+
+      const args = {};
+      const openInvocation = {
+        method: 'open',
+        args,
+        satisfiesTrust: () => true,
+      };
+      impl.executeAction(openInvocation);
+
+      return whenCalled(finalizeSpy).then(() => {
+        expect(createCloseButtonSpy).not.to.be.called;
+        expect(tieSpy).to.be.calledOnce;
+        expect(tryFocusSpy).to.be.calledWith(impl.closeButtonHeader_);
+      });
     });
   }
 );
