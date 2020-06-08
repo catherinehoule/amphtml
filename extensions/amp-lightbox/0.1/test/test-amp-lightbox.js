@@ -58,6 +58,15 @@ describes.realWin(
       return button;
     }
 
+    function createCloseButton() {
+      const button = dom.createElementWithAttributes(doc, 'button', {
+        'id': 'closeButton',
+        'on': 'tap:myLightbox.close',
+      });
+      button.textContent = 'X';
+      return button;
+    }
+
     function createLink(id) {
       const oneLink = dom.createElementWithAttributes(doc, 'a', {
         'href': 'https://amp.dev/',
@@ -112,13 +121,7 @@ describes.realWin(
         };
       };
 
-      const sourceElement = doc.createElement('button');
-      sourceElement.textContent = 'Open lightbox';
-      doc.body.appendChild(sourceElement);
-      const nextElement = doc.createElement('button');
-      nextElement.textContent = 'Something to focus on';
-      doc.body.appendChild(nextElement);
-
+      const sourceElement = createOpeningButton('openBtn');
       const setupCloseSpy = env.sandbox.spy(impl, 'close');
 
       impl.open_({caller: sourceElement});
@@ -127,21 +130,13 @@ describes.realWin(
       expect(setupCloseSpy).to.be.calledOnce;
     });
 
-    // Accessibility
-    // 1. If there is focus in the lightbox, we do not create a top close button or change focus
-    // 2. DONE If there is no focus in the lightbox but has close btn, we focus on it
-    // 3. DONE If there is no focus in the lightbox or close btn, we create a close button and focus on it
-    // 4. DONE If a user "blurs" by focusing on an element that is in the amp-lightbox subtree, it should stay open.
-    // 5a. DONE WITH 4 If a user "blurs" before the amp-lightbox subtree, it should close.
-    // 5b. DONE WITH 4 If a user "blurs" after the amp-lightbox subtree, it should close.
-    // 6. DONE On close, focus should go back to trigger
-    // 7. DONE Ad: we do not create a button and we focus on the `i-amphtml-ad-close-header`
-    //it.only('should not change focus if user has set it already', () => {
     it('should not change focus or create a button if a focus has been made in the modal', () => {
+      const openButton = createOpeningButton('openingButton');
       const lightbox = createLightbox();
       const myLink = createLink('randomLink');
       myLink.setAttribute('autofocus', '');
       lightbox.appendChild(myLink);
+
       const impl = lightbox.implementation_;
       impl.getHistory_ = () => {
         return {
@@ -149,10 +144,7 @@ describes.realWin(
           push: () => Promise.resolve(11),
         };
       };
-
-      const openButton = createOpeningButton('openingButton');
       env.sandbox.stub(impl, 'hasCurrentFocus_').returns(true);
-
       const focusInModalSpy = env.sandbox.spy(impl, 'focusInModal_');
       const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
       const createSRBtnSpy = env.sandbox.spy(
@@ -170,14 +162,10 @@ describes.realWin(
 
     it('should focus on close button if no handmade focus but has close button', () => {
       const lightbox = createLightbox();
-      const closeButton = dom.createElementWithAttributes(doc, 'button', {
-        'id': 'closeButton',
-        'on': 'tap:myLightbox.close',
-      });
-      closeButton.textContent = 'X';
+      const closeButton = createCloseButton();
       lightbox.appendChild(closeButton);
-
       const impl = lightbox.implementation_;
+
       const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
       const finalizeSpy = env.sandbox.spy(impl, 'finalizeOpen_');
       const createCloseButtonSpy = env.sandbox.spy(
@@ -277,21 +265,15 @@ describes.realWin(
     });
 
     it('should return focus to source element after close', () => {
+      const openButton = createOpeningButton('openingButton');
       const lightbox = createLightbox();
-      const closeButton = dom.createElementWithAttributes(doc, 'button', {
-        'id': 'closeButton',
-        'on': 'tap:myLightbox.close',
-      });
-      closeButton.textContent = 'X';
+      const closeButton = createCloseButton();
       lightbox.appendChild(closeButton);
       const impl = lightbox.implementation_;
-
-      const openButton = createOpeningButton('openingButton');
 
       const openSpy = env.sandbox.spy(impl, 'finalizeOpen_');
       const closeSpy = env.sandbox.spy(impl, 'finalizeClose_');
       const tryFocusSpy = env.sandbox.spy(dom, 'tryFocus');
-
       impl.getHistory_ = () => {
         return {
           pop: () => {},
@@ -336,7 +318,7 @@ describes.realWin(
 
       return whenCalled(finalizeSpy).then(() => {
         expect(createCloseButtonSpy).not.to.be.called;
-        expect(tieSpy).to.be.calledOnce;
+        expect(tieSpy).to.be.calledWith(impl.closeButtonHeader_);
         expect(tryFocusSpy).to.be.calledWith(impl.closeButtonHeader_);
       });
     });

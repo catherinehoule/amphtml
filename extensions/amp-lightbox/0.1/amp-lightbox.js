@@ -98,7 +98,6 @@ function renderCloseButtonHeader(ctx) {
 /**
  * @param {!Element} header
  */
-
 function showCloseButtonHeader(header) {
   header.classList.add('amp-ad-close-header');
 }
@@ -450,7 +449,7 @@ class AmpLightbox extends AMP.BaseElement {
       },
       () => {
         // Done in vsync in order to apply transition.
-        showCloseButtonHeader(header);
+        showCloseButtonHeader(this.closeButtonHeader_);
 
         setImportantStyles(dev().assertElement(this.container_), {
           'margin-top': px(headerHeight),
