@@ -95,6 +95,14 @@ function renderCloseButtonHeader(ctx) {
     </i-amphtml-ad-close-header>`;
 }
 
+/**
+ * @param {!Element} header
+ */
+
+function showCloseButtonHeader(header) {
+  header.classList.add('amp-ad-close-header');
+}
+
 class AmpLightbox extends AMP.BaseElement {
   /** @param {!AmpElement} element */
   constructor(element) {
@@ -412,8 +420,7 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
-   * Renders a top bar with close button if the attribute close-button is set
-   * Used for ad if no close button is set.
+   * Renders a top bar with close button if the attribute close-button is set. For ads
    * @private
    */
   maybeRenderCloseButtonHeader_() {
@@ -421,12 +428,21 @@ class AmpLightbox extends AMP.BaseElement {
     if (element.getAttribute('close-button') == null) {
       return;
     }
-    let headerHeight;
 
     this.closeButtonHeader_ = renderCloseButtonHeader(element);
     element.insertBefore(this.closeButtonHeader_, this.container_);
-    this.tieCloseButton_(this.closeButtonHeader_);
 
+    this.tieCloseButton_(this.closeButtonHeader_);
+    // click event doesn't work with enter on i-amphtml-ad-close-header
+    this.boundCloseOnEnter_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEnter_.bind(
+      this
+    ));
+    this.closeButtonHeader_.addEventListener(
+      'keydown',
+      this.boundCloseOnEnter_
+    );
+
+    let headerHeight;
     this.measureMutateElement(
       () => {
         headerHeight = this.closeButtonHeader_./*OK*/ getBoundingClientRect()
@@ -434,7 +450,7 @@ class AmpLightbox extends AMP.BaseElement {
       },
       () => {
         // Done in vsync in order to apply transition.
-        this.closeButtonHeader_.classList.add('amp-ad-close-header');
+        showCloseButtonHeader(header);
 
         setImportantStyles(dev().assertElement(this.container_), {
           'margin-top': px(headerHeight),
@@ -445,7 +461,7 @@ class AmpLightbox extends AMP.BaseElement {
   }
 
   /**
-   * --
+   * Add close button event listener
    * @private
    * @param {!Element} button
    */
@@ -454,15 +470,10 @@ class AmpLightbox extends AMP.BaseElement {
       // Click gesture is high trust.
       this.close(ActionTrust.HIGH);
     });
-
-    this.boundCloseOnEnter_ = /** @type {?function(this:AmpLightbox, Event)} */ (this.closeOnEnter_.bind(
-      this
-    ));
-    button.addEventListener('keydown', this.boundCloseOnEnter_);
   }
 
   /**
-   * --
+   * Remove listeners from close button
    * @private
    * @param {!Element} button
    */
@@ -471,7 +482,6 @@ class AmpLightbox extends AMP.BaseElement {
       return;
     }
 
-    // Make sure all listeners are gone
     const copyOfButton = button.cloneNode(true);
     button.parentNode.replaceChild(copyOfButton, button);
   }
@@ -631,7 +641,7 @@ class AmpLightbox extends AMP.BaseElement {
       this.closeButton_ = this.getExistingCloseButton_();
 
       // If we do not have a close button provided by the page author, create one
-      // at the start of the lightbox for screen readers.
+      // at the start of the lightbox visible only for screen readers.
       if (!this.closeButton_) {
         this.closeButton_ = this.createScreenReaderCloseButton_();
         this.element.insertBefore(this.closeButton_, this.element.firstChild);
